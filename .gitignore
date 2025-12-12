@@ -1,0 +1,50 @@
+# ======================
+# Python
+# ======================
+__pycache__/
+*.py[cod]
+
+# ======================
+# Virtual environments
+# ======================
+venv/
+.env/
+.venv/
+
+# ======================
+# Build / packaging
+# ======================
+build/
+dist/
+*.egg-info/
+
+# ======================
+# ML / training outputs
+# ======================
+runs/
+*.pt
+*.pth
+*.ckpt
+
+runs/**/config.json
+runs/**/metrics.json
+
+# ======================
+# Logs & metrics
+# ======================
+*.log
+
+# ======================
+# Editor / OS
+# ======================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ======================
+# Secrets
+# ======================
+.env
+*.key
+*.pem
