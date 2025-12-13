@@ -107,6 +107,7 @@ def train_ci_model(
     it = iter(train_loader)
     t0 = time.time()
     ema_loss = None
+    ema_acc = None
 
     for step in range(steps):
         batch = next(it)
@@ -127,6 +128,7 @@ def train_ci_model(
             acc = (pred == label).float().mean().item()
             p_indep = label.mean().item()
             avg_prob = probs.mean().item()
+            prob_std = probs.std().item()
 
 
         opt.zero_grad(set_to_none=True)
@@ -136,13 +138,14 @@ def train_ci_model(
 
         l = float(loss.item())
         ema_loss = l if ema_loss is None else (0.98 * ema_loss + 0.02 * l)
+        ema_acc = acc if ema_acc is None else (0.98 * ema_acc + 0.02 * acc)
 
         if (step + 1) % log_every == 0:
             dt = time.time() - t0
             max_m = curriculum.max_m_at_step(step)
             print(
                 f"step {step+1:>7}/{steps} | loss {l:.4f} (ema {ema_loss:.4f})"
-                f" | acc {acc:.3f} | p(indep) {p_indep:.3f} | p̂ {avg_prob:.3f}"
+                f" | acc {acc:.3f} (ema {ema_acc:.3f}) | p(indep) {p_indep:.3f} | avg(p̂) {avg_prob:.3f} | std(p̂) {prob_std:.3f}"
                 f" | max_m {max_m} | {dt:.1f}s"
             )
             t0 = time.time()
