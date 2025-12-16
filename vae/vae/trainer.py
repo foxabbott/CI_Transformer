@@ -23,6 +23,14 @@ def train_vae(cfg: VAETrainConfig) -> None:
     loader = make_loader(cfg.data_dir, cfg.image_size, cfg.channels, cfg.batch_size, cfg.num_workers)
     it = iter(loader)
 
+    def next_batch():
+        nonlocal it
+        try:
+            return next(it)
+        except StopIteration:
+            it = iter(loader)
+            return next(it)
+
     # model
     base = ConvVAE(image_size=cfg.image_size, in_ch=cfg.channels, z_dim=cfg.z_dim, base_ch=cfg.base_channels)
     if cfg.model == "factor_vae":
@@ -30,6 +38,11 @@ def train_vae(cfg: VAETrainConfig) -> None:
     else:
         model = base
     model.to(dev)
+
+    def _unwrap(model: nn.Module) -> nn.Module:
+        # For FactorVAE, the "real" VAE is model.vae (ConvVAE)
+        return model.vae if isinstance(model, FactorVAEWrapper) else model
+
 
     opt = AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
 
@@ -50,7 +63,7 @@ def train_vae(cfg: VAETrainConfig) -> None:
     t0 = time.time()
 
     for step in range(cfg.steps):
-        x = next(it).to(dev)
+        x = next_batch().to(dev)
 
         out = model(x)
         x_recon_logits = out.x_recon
@@ -154,15 +167,44 @@ def train_vae(cfg: VAETrainConfig) -> None:
             t0 = time.time()
 
         if cfg.save_every and (step + 1) % cfg.save_every == 0:
+            to_save = _unwrap(model).cpu()
             ckpt = {
                 "step": step + 1,
-                "model_state": model.state_dict(),
+                "model_state": to_save.state_dict(),
+                "model": to_save,             # convenience (pickled)
                 "config": asdict(cfg),
             }
+            # FactorVAE discriminator (optional but useful)
+            if isinstance(model, FactorVAEWrapper):
+                ckpt["disc_state"] = model.disc.state_dict()
+
             path = os.path.join(cfg.out_dir, f"ckpt_{step+1}.pt")
             torch.save(ckpt, path)
             print(f"  saved checkpoint: {path}")
 
+            # put model back on device
+            _unwrap(model).to(dev)
+
     # final
-    torch.save({"model_state": model.state_dict(), "config": asdict(cfg)}, os.path.join(cfg.out_dir, "final.pt"))
-    print(f"Saved final model to {os.path.join(cfg.out_dir, 'final.pt')}")
+    final_state_path = os.path.join(cfg.out_dir, "final_state.pt")
+    final_model_path = os.path.join(cfg.out_dir, "final_model.pt")
+
+    vae_to_save = _unwrap(model).cpu()
+
+    # 1) portable
+    torch.save(
+        {"model_state": vae_to_save.state_dict(), "config": asdict(cfg)},
+        final_state_path,
+    )
+
+    # 2) convenient (pickled full model)
+    final_blob = {"model": vae_to_save, "config": asdict(cfg)}
+    if isinstance(model, FactorVAEWrapper):
+        final_blob["disc_state"] = model.disc.state_dict()
+    torch.save(final_blob, final_model_path)
+
+    print(f"Saved final weights to {final_state_path}")
+    print(f"Saved final full model to {final_model_path}")
+
+    # put model back on device
+    vae_to_save.to(dev)

@@ -28,7 +28,7 @@ def main():
     p.add_argument("--factor-gamma", default=10.0, type=float)
     p.add_argument("--disc-lr", default=1e-4, type=float)
 
-    p.add_argument("--log-every", default=200, type=int)
+    p.add_argument("--log-every", default=1, type=int)
     p.add_argument("--save-every", default=10000, type=int)
     p.add_argument("--seed", default=0, type=int)
     p.add_argument("--device", default=None, type=str)

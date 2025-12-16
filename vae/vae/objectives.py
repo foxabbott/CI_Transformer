@@ -8,23 +8,6 @@ import torch.nn.functional as F
 
 from .utils import kl_diag_gaussian, log_density_gaussian
 
-def gaussian_nll_learned(x_out: Tensor, x: Tensor, clamp_logvar: tuple[float,float]=(-6.0, 2.0)) -> Tensor:
-    """
-    x_out: (B, 2C, H, W) where first C are mean logits, next C are log-variance.
-    x: (B, C, H, W) in [0,1]
-    returns: (B,)
-    """
-    B, CC, H, W = x_out.shape
-    C = CC // 2
-    mu_logits, logvar = x_out[:, :C], x_out[:, C:]
-
-    mu = torch.sigmoid(mu_logits)
-    logvar = logvar.clamp(*clamp_logvar)   # important to prevent crazy variances
-    var = logvar.exp()
-
-    nll = 0.5 * ((x - mu) ** 2) / var + 0.5 * (logvar + math.log(2 * math.pi))
-    return nll.flatten(1).sum(dim=1)
-
 def recon_loss(x_recon_logits: Tensor, x: Tensor, kind: str) -> Tensor:
     # returns (B,)
     if kind == "bce":
@@ -33,11 +16,10 @@ def recon_loss(x_recon_logits: Tensor, x: Tensor, kind: str) -> Tensor:
         return loss.flatten(1).sum(dim=1)
     if kind == "mse":
         # assume decoder outputs raw values; use MSE
-        loss = F.mse_loss(torch.sigmoid(x_recon_logits), x, reduction="none")
+        x_recon = torch.sigmoid(x_recon_logits)
+        loss = F.mse_loss(x_recon, x, reduction="none")
         return loss.flatten(1).sum(dim=1)
-    if kind == "gaussian_nll":
-        return gaussian_nll_learned(x_recon_logits, x)
-    raise ValueError("recon_loss kind must be 'bce', 'mse', or 'gaussian_nll'.")
+    raise ValueError("recon_loss kind must be 'bce', 'mse'.")
 
 def tc_vae_decompose(mu: Tensor, logvar: Tensor, z: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
     """Beta-TC-VAE decomposition estimates (B,) for MI, TC, DW-KL.
