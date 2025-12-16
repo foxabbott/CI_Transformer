@@ -19,7 +19,11 @@ class ConvEncoder(nn.Module):
         layers = []
         cur = in_ch
         for _ in range(4):
-            layers += [nn.Conv2d(cur, ch, 4, 2, 1), nn.GELU()]
+            layers += [
+                nn.Conv2d(cur, ch, 4, 2, 1),
+                nn.BatchNorm2d(ch), 
+                nn.GELU()
+                ]
             cur = ch
             ch *= 2
         self.net = nn.Sequential(*layers)
@@ -50,7 +54,11 @@ class ConvDecoder(nn.Module):
 
         # mirror: 256 -> 128 -> 64 -> 32 -> out_ch
         for nxt in [c // 2, c // 4, c // 8]:
-            layers += [nn.ConvTranspose2d(cur, nxt, 4, 2, 1), nn.GELU()]
+            layers += [
+                nn.ConvTranspose2d(cur, nxt, 4, 2, 1), 
+                nn.BatchNorm2d(nxt),
+                nn.GELU()
+                ]
             cur = nxt
 
         layers += [nn.ConvTranspose2d(cur, out_ch, 4, 2, 1)]
