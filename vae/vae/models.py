@@ -41,36 +41,51 @@ class ConvEncoder(nn.Module):
         h = self.net(x).reshape(x.size(0), -1)
         return self.fc_mu(h), self.fc_logvar(h)
 
+class UpBlock(nn.Module):
+    def __init__(self, in_ch: int, out_ch: int):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode="nearest"),  # or "bilinear", align_corners=False
+            nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(out_ch),
+            nn.GELU(),
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.net(x)
+
+
 class ConvDecoder(nn.Module):
     def __init__(self, out_ch: int, base_ch: int, z_dim: int, out_shape: Tuple[int,int,int], flat_dim: int):
         super().__init__()
         self.out_shape = out_shape
         self.flat_dim = flat_dim
+
         self.fc = nn.Sequential(nn.Linear(z_dim, flat_dim), nn.GELU())
 
         c, _, _ = out_shape
-        layers = []
         cur = c
 
-        # mirror: 256 -> 128 -> 64 -> 32 -> out_ch
-        for nxt in [c // 2, c // 4, c // 8]:
-            layers += [
-                nn.ConvTranspose2d(cur, nxt, 4, 2, 1), 
-                nn.BatchNorm2d(nxt),
-                nn.GELU()
-                ]
-            cur = nxt
+        self.up1 = UpBlock(cur, c // 2)   # 256 -> 128
+        self.up2 = UpBlock(c // 2, c // 4) # 128 -> 64
+        self.up3 = UpBlock(c // 4, c // 8) # 64 -> 32
 
-        layers += [nn.ConvTranspose2d(cur, out_ch, 4, 2, 1)]
-
-        self.net = nn.Sequential(*layers)
+        # final upsample to 64x64 + produce logits/mean
+        self.final = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode="nearest"),
+            nn.Conv2d(c // 8, out_ch, kernel_size=3, stride=1, padding=1),
+        )
 
     def forward(self, z: Tensor) -> Tensor:
         h = self.fc(z)
         B = z.size(0)
         c, hh, ww = self.out_shape
         h = h.view(B, c, hh, ww)
-        return self.net(h)
+        h = self.up1(h)
+        h = self.up2(h)
+        h = self.up3(h)
+        return self.final(h)
+
 
 class ConvVAE(nn.Module):
     def __init__(self, image_size: int = 64, in_ch: int = 3, z_dim: int = 32, base_ch: int = 32):
