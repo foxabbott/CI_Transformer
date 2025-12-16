@@ -11,6 +11,12 @@ class VAEOutput:
     logvar: Tensor
     z: Tensor
 
+def gn(c: int, max_groups: int = 32) -> nn.GroupNorm:
+    g = min(max_groups, c)
+    while c % g != 0:
+        g -= 1
+    return nn.GroupNorm(g, c)
+
 class ConvEncoder(nn.Module):
     def __init__(self, in_ch: int, base_ch: int, z_dim: int, image_size: int):
         super().__init__()
@@ -21,7 +27,7 @@ class ConvEncoder(nn.Module):
         for _ in range(4):
             layers += [
                 nn.Conv2d(cur, ch, 4, 2, 1),
-                nn.BatchNorm2d(ch), 
+                gn(ch), 
                 nn.GELU()
                 ]
             cur = ch
@@ -44,16 +50,19 @@ class ConvEncoder(nn.Module):
 class UpBlock(nn.Module):
     def __init__(self, in_ch: int, out_ch: int):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode="nearest"),  # or "bilinear", align_corners=False
-            nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(out_ch),
+        self.up = nn.Upsample(scale_factor=2, mode="nearest")
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, 3, 1, 1),
+            gn(out_ch),
+            nn.GELU(),
+            nn.Conv2d(out_ch, out_ch, 3, 1, 1),
+            gn(out_ch),
             nn.GELU(),
         )
 
-    def forward(self, x: Tensor) -> Tensor:
-        return self.net(x)
-
+    def forward(self, x):
+        x = self.up(x)
+        return self.conv(x)
 
 class ConvDecoder(nn.Module):
     def __init__(self, out_ch: int, base_ch: int, z_dim: int, out_shape: Tuple[int,int,int], flat_dim: int):
