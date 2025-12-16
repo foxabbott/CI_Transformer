@@ -11,7 +11,7 @@ def main():
     p.add_argument("--model", type=str, default="vae",
                    choices=["vae", "beta_vae", "tc_vae", "dip_vae", "factor_vae"])
     p.add_argument("--image-size", type=int, default=224)
-    p.add_argument("--steps", type=int, default=200_000)
+    p.add_argument("--steps", type=int, default=3_000)
     p.add_argument("--batch", type=int, default=64)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--z-dim", type=int, default=64)
