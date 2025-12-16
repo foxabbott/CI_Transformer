@@ -1,11 +1,29 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Tuple
+import math
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 
 from .utils import kl_diag_gaussian, log_density_gaussian
+
+def gaussian_nll_learned(x_out: Tensor, x: Tensor, clamp_logvar: tuple[float,float]=(-6.0, 2.0)) -> Tensor:
+    """
+    x_out: (B, 2C, H, W) where first C are mean logits, next C are log-variance.
+    x: (B, C, H, W) in [0,1]
+    returns: (B,)
+    """
+    B, CC, H, W = x_out.shape
+    C = CC // 2
+    mu_logits, logvar = x_out[:, :C], x_out[:, C:]
+
+    mu = torch.sigmoid(mu_logits)
+    logvar = logvar.clamp(*clamp_logvar)   # important to prevent crazy variances
+    var = logvar.exp()
+
+    nll = 0.5 * ((x - mu) ** 2) / var + 0.5 * (logvar + math.log(2 * math.pi))
+    return nll.flatten(1).sum(dim=1)
 
 def recon_loss(x_recon_logits: Tensor, x: Tensor, kind: str) -> Tensor:
     # returns (B,)
