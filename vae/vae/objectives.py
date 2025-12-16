@@ -1,12 +1,10 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Dict, Tuple
-import math
+from typing import Tuple
 import torch
-from torch import nn, Tensor
+from torch import Tensor
 import torch.nn.functional as F
 
-from .utils import kl_diag_gaussian, log_density_gaussian
+from .utils import log_density_gaussian
 
 def recon_loss(x_recon_logits: Tensor, x: Tensor, kind: str) -> Tensor:
     # returns (B,)
