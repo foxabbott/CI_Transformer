@@ -47,12 +47,14 @@ class ConvDecoder(nn.Module):
         c, _, _ = out_shape
         layers = []
         cur = c
-        # 3 upsample blocks, then final
-        for _ in range(3):
-            nxt = max(out_ch, cur // 2)
+
+        # mirror: 256 -> 128 -> 64 -> 32 -> out_ch
+        for nxt in [c // 2, c // 4, c // 8]:
             layers += [nn.ConvTranspose2d(cur, nxt, 4, 2, 1), nn.GELU()]
             cur = nxt
+
         layers += [nn.ConvTranspose2d(cur, out_ch, 4, 2, 1)]
+
         self.net = nn.Sequential(*layers)
 
     def forward(self, z: Tensor) -> Tensor:
