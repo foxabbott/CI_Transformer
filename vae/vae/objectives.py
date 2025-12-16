@@ -35,7 +35,9 @@ def recon_loss(x_recon_logits: Tensor, x: Tensor, kind: str) -> Tensor:
         # assume decoder outputs raw values; use MSE
         loss = F.mse_loss(torch.sigmoid(x_recon_logits), x, reduction="none")
         return loss.flatten(1).sum(dim=1)
-    raise ValueError("recon_loss kind must be 'bce' or 'mse'.")
+    if kind == "gaussian_nll":
+        return gaussian_nll_learned(x_recon_logits, x)
+    raise ValueError("recon_loss kind must be 'bce', 'mse', or 'gaussian_nll'.")
 
 def tc_vae_decompose(mu: Tensor, logvar: Tensor, z: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
     """Beta-TC-VAE decomposition estimates (B,) for MI, TC, DW-KL.
