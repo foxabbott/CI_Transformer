@@ -161,6 +161,7 @@ class CISetTransformer(nn.Module):
         )
 
     def forward(self, x: Tensor, y: Tensor, z: Optional[Tensor] = None, z_mask: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:
+        # Standardize inputs per instance if configured
         if self.cfg.standardize_inputs:
             x = standardize_per_instance(x)
             y = standardize_per_instance(y)
@@ -168,10 +169,12 @@ class CISetTransformer(nn.Module):
                 z = standardize_per_instance(z)
 
         B, N = x.shape
+        # Encode x and y columns as set embeddings
         cx = self.col_enc(x)
         cy = self.col_enc(y)
 
         if z is None:
+            # No conditioning set: zero out all Z-related features
             cZagg = x.new_zeros((B, self.cfg.dim))
             zbar = x.new_zeros((B, N))
             m = x.new_zeros((B, 1))
@@ -182,29 +185,34 @@ class CISetTransformer(nn.Module):
             Bz, M, Nz = z.shape
             assert Bz == B and Nz == N
             if M == 0:
+                # Empty conditioning set: zero out all Z-related features
                 cZagg = x.new_zeros((B, self.cfg.dim))
                 zbar = x.new_zeros((B, N))
                 m = x.new_zeros((B, 1))
                 cXZagg = x.new_zeros((B, self.cfg.dim))
                 cYZagg = x.new_zeros((B, self.cfg.dim))
             else:
+                # Encode each Z column, then aggregate across Z set
                 cz = self.col_enc(z.reshape(B*M, N)).reshape(B, M, -1)
                 cZagg = self.z_aggr(cz, z_mask)
+                
                 if self.use_cross:
+                    # Encode cross-pair relationships: (X, Z_i) and (Y, Z_i) for each Z_i
                     z_flat = z.reshape(B * M, N)  # (B*M, N)
-
                     x_rep = x.unsqueeze(1).expand(B, M, N).reshape(B * M, N)
                     y_rep = y.unsqueeze(1).expand(B, M, N).reshape(B * M, N)
 
                     exz = self.tz_enc(x_rep, z_flat).reshape(B, M, -1)  # (B,M,d)
                     eyz = self.tz_enc(y_rep, z_flat).reshape(B, M, -1)  # (B,M,d)
 
+                    # Aggregate cross-pair encodings across Z set
                     cXZagg = self.tz_aggr(exz, z_mask)  # (B,d)
                     cYZagg = self.tz_aggr(eyz, z_mask)  # (B,d)
                 else:
                     cXZagg = x.new_zeros((B, self.cfg.dim))
                     cYZagg = x.new_zeros((B, self.cfg.dim))
 
+                # Compute mean Z column (zbar) and count (m) for pair encoder
                 if z_mask is None:
                     zbar = z.mean(dim=1)
                     m = x.new_full((B, 1), float(M))
@@ -213,14 +221,17 @@ class CISetTransformer(nn.Module):
                     m = mask.sum(dim=1).clamp_min(1.0)                 # (B,1)
                     zbar = (z * mask).sum(dim=1) / m                   # (B,N)
 
+        # Symmetric features from X and Y column encodings
         s_add = cx + cy
         s_abs = (cx - cy).abs()
         s_mul = cx * cy
 
+        # Symmetric features from cross-pair encodings
         xz_add = cXZagg + cYZagg
         xz_abs = (cXZagg - cYZagg).abs()
         xz_mul = cXZagg * cYZagg
 
+        # Build feature vector: XY symmetric features, Z aggregate, cross-pairs (optional), pair encoding (optional), count
         feats = [s_add, s_abs, s_mul, cZagg]
         if self.use_cross:
             feats.extend([xz_add, xz_abs, xz_mul])
@@ -228,6 +239,7 @@ class CISetTransformer(nn.Module):
             feats.append(self.pair_enc(x, y, zbar))
         feats.append(m.to(dtype=x.dtype))
 
+        # Final prediction head
         u = torch.cat(feats, dim=1)
         logits = self.head(u).squeeze(-1)
         probs = torch.sigmoid(logits)
