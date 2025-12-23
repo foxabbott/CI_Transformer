@@ -22,12 +22,11 @@ class RandomDAGConfig:
         if self.max_parents < 0:
             raise ValueError("max_parents must be >= 0.")
 
-def random_dag(cfg: RandomDAGConfig, seed: Optional[int] = None) -> Tuple[Array, Array, list[int]]:
+def random_dag(cfg: RandomDAGConfig, seed: Optional[int] = None) -> Tuple[Array, list[int]]:
     """Generate a random acyclic directed graph by sampling an ordering then adding forward edges.
 
     Returns:
         adj: (d,d) with adj[i,j]=1 if i->j
-        weights: (d,d) with weights[i,j] nonzero if i->j
         order: a topological order used to ensure acyclicity
     """
     r = rng(seed)
@@ -35,9 +34,6 @@ def random_dag(cfg: RandomDAGConfig, seed: Optional[int] = None) -> Tuple[Array,
     order = r.permutation(d).tolist()
 
     adj = np.zeros((d, d), dtype=np.int8)
-    weights = np.zeros((d, d), dtype=np.float32)
-
-    pos = {node: k for k, node in enumerate(order)}
 
     for j in range(d):
         # choose potential parents among earlier nodes in order
@@ -54,17 +50,13 @@ def random_dag(cfg: RandomDAGConfig, seed: Optional[int] = None) -> Tuple[Array,
 
         for p in parents:
             adj[p, node_j] = 1
-            w = cfg.weight_scale * r.normal(0, 1)
-            weights[p, node_j] = float(w)
 
     if cfg.ensure_connected:
-        # add at least one incoming edge for each non-root by connecting to a previous node if needed
+        # add one incoming edge for each non-root by connecting to a previous node if needed
         for j in range(1, d):
             node_j = order[j]
             if adj[:, node_j].sum() == 0:
                 p = order[r.integers(0, j)]
                 adj[p, node_j] = 1
-                weights[p, node_j] = float(cfg.weight_scale * r.normal(0, 1))
 
-    # sanity check acyclicity (since edges only forward in order, it's acyclic)
-    return adj, weights, order
+    return adj, order
