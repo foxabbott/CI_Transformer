@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import deque
 from typing import Iterable, List, Set, Tuple
 import numpy as np
 
@@ -37,13 +38,6 @@ def d_separated(adj: Array, X: Iterable[int], Y: Iterable[int], Z: Iterable[int]
     Y = set(map(int, Y))
     Z = set(map(int, Z))
 
-    # Precompute which nodes have a descendant in Z (needed for collider activation)
-    d_in_Z = set(Z)
-    for z in list(Z):
-        # add ancestors of Z? Bayes-ball needs "descendant in Z" for collider opening.
-        # We'll compute for each node whether it has a descendant in Z by reverse reachability.
-        pass
-
     # Reverse reachability from Z to mark nodes that have a descendant in Z:
     # A node has a descendant in Z iff it can reach some z by following edges forward.
     # So we can mark all ancestors of Z by traversing parents from each z.
@@ -61,7 +55,6 @@ def d_separated(adj: Array, X: Iterable[int], Y: Iterable[int], Z: Iterable[int]
 
     # Bayes-ball state: (node, direction) where direction in {"up","down"}
     # "up": coming from a child; "down": coming from a parent.
-    from collections import deque
     q = deque()
     visited = set()
 
