@@ -77,7 +77,7 @@ class PairEncoder(nn.Module):
         super().__init__()
         d = cfg.dim
         self.row_mlp = nn.Sequential(
-            nn.Linear(4, d),  # [x+y, |x-y|, x*y, zbar]
+            nn.Linear(3, d),  # [x+y, |x-y|, x*y]
             nn.GELU(),
             nn.Linear(d, d),
         )
@@ -88,8 +88,8 @@ class PairEncoder(nn.Module):
         self.pma = PMA(d, cfg.num_heads, num_seeds=1, dropout=cfg.dropout)
         self.out_ln = nn.LayerNorm(d)
 
-    def forward(self, x: Tensor, y: Tensor, zbar: Tensor) -> Tensor:
-        feats = torch.stack([x + y, (x - y).abs(), x * y, zbar], dim=-1)  # (B,N,4)
+    def forward(self, x: Tensor, y: Tensor) -> Tensor:
+        feats = torch.stack([x + y, (x - y).abs(), x * y], dim=-1)  # (B,N,4)
         h = self.row_mlp(feats)
         for blk in self.blocks:
             h = blk(h)
@@ -212,10 +212,9 @@ class CISetTransformer(nn.Module):
                     cXZagg = x.new_zeros((B, self.cfg.dim))
                     cYZagg = x.new_zeros((B, self.cfg.dim))
 
-                # Compute mean Z column (zbar) and count (m) for pair encoder
                 if z_mask is None:
-                    zbar = z.mean(dim=1)
-                    m = x.new_full((B, 1), float(M))
+                    zbar = z.mean(dim=1)  # mean of all Z columns at each row
+                    m = x.new_full((B, 1), float(M))  # how many conditioning columns in each batch?
                 else:
                     mask = z_mask.to(dtype=x.dtype).unsqueeze(-1)      # (B,M,1)
                     m = mask.sum(dim=1).clamp_min(1.0)                 # (B,1)
@@ -226,14 +225,13 @@ class CISetTransformer(nn.Module):
         s_abs = (cx - cy).abs()
         s_mul = cx * cy
 
-        # Symmetric features from cross-pair encodings
-        xz_add = cXZagg + cYZagg
-        xz_abs = (cXZagg - cYZagg).abs()
-        xz_mul = cXZagg * cYZagg
-
         # Build feature vector: XY symmetric features, Z aggregate, cross-pairs (optional), pair encoding (optional), count
         feats = [s_add, s_abs, s_mul, cZagg]
         if self.use_cross:
+            # Symmetric features from cross-pair encodings
+            xz_add = cXZagg + cYZagg
+            xz_abs = (cXZagg - cYZagg).abs()
+            xz_mul = cXZagg * cYZagg
             feats.extend([xz_add, xz_abs, xz_mul])
         if self.use_pair:
             feats.append(self.pair_enc(x, y, zbar))
