@@ -18,15 +18,13 @@ Implements:
 
 ## Install
 
-Put `training/` in your repo and install editable from its folder:
+Install editable from repo root:
 
 ```bash
 pip install -e .
 ```
 
-You should already have editable installs for:
-- causal_data_gen
-- ci_models
+This installs `training`, `ci_models`, and `causal_data_gen` together.
 
 ## Quick run
 

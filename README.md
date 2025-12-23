@@ -31,8 +31,6 @@ Typical install (from repo root, after cloning):
 
 ```bash
 pip install -e .
-pip install -e ./src/ci_models
-pip install -e ./src/training
 ```
 
 You will need Python>=3.9, numpy, pytorch, and other common deps.
