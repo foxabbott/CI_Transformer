@@ -9,6 +9,7 @@ from .utils import standardize_per_instance
 
 @dataclass
 class CISetTransformerConfig:
+    """Hyperparameters controlling CI set transformer architecture and behavior."""
     dim: int = 128
     num_heads: int = 4
     num_inducing: int = 32
@@ -20,6 +21,7 @@ class CISetTransformerConfig:
     use_cross_encoder: bool = True 
 
 class ColumnEncoder(nn.Module):
+    """Encodes a single column (set of rows) into a fixed-length representation."""
     def __init__(self, cfg: CISetTransformerConfig):
         super().__init__()
         d = cfg.dim
@@ -43,6 +45,7 @@ class ColumnEncoder(nn.Module):
         return self.out_ln(pooled)
 
 class ZAggregator(nn.Module):
+    """Aggregates encoded conditioning columns using attention or mean pooling."""
     def __init__(self, cfg: CISetTransformerConfig):
         super().__init__()
         self.cfg = cfg
@@ -73,6 +76,7 @@ class ZAggregator(nn.Module):
         return (cZ * w).sum(dim=1)
 
 class PairEncoder(nn.Module):
+    """Encodes pairwise relationship between X and Y columns with permutation invariance."""
     def __init__(self, cfg: CISetTransformerConfig):
         super().__init__()
         d = cfg.dim
@@ -89,7 +93,7 @@ class PairEncoder(nn.Module):
         self.out_ln = nn.LayerNorm(d)
 
     def forward(self, x: Tensor, y: Tensor) -> Tensor:
-        feats = torch.stack([x + y, (x - y).abs(), x * y], dim=-1)  # (B,N,4)
+        feats = torch.stack([x + y, (x - y).abs(), x * y], dim=-1)  # (B,N,3)
         h = self.row_mlp(feats)
         for blk in self.blocks:
             h = blk(h)
@@ -128,6 +132,7 @@ class CrossPairEncoder(nn.Module):
 
 
 class CISetTransformer(nn.Module):
+    """Full model for conditional independence classification on set-valued columns."""
     def __init__(self, cfg: CISetTransformerConfig = CISetTransformerConfig()):
         super().__init__()
         self.cfg = cfg
@@ -144,11 +149,11 @@ class CISetTransformer(nn.Module):
             self.pair_enc = PairEncoder(cfg)
 
         d = cfg.dim
-        head_in = 3*d + d + 1  # sym(XY) + Z + m
+        head_in = 3*d + d + 1  # add/abs/mul[sym(X), sym(Y)] + Z + m
         if self.use_cross:
             head_in += 3*d      # sym(XZ,YZ): add/abs/mul
         if self.use_pair:
-            head_in += d
+            head_in += d        # sym(XY)
 
         self.head = nn.Sequential(
             nn.Linear(head_in, 256),
@@ -176,7 +181,6 @@ class CISetTransformer(nn.Module):
         if z is None:
             # No conditioning set: zero out all Z-related features
             cZagg = x.new_zeros((B, self.cfg.dim))
-            zbar = x.new_zeros((B, N))
             m = x.new_zeros((B, 1))
             cXZagg = x.new_zeros((B, self.cfg.dim))
             cYZagg = x.new_zeros((B, self.cfg.dim))
@@ -187,7 +191,6 @@ class CISetTransformer(nn.Module):
             if M == 0:
                 # Empty conditioning set: zero out all Z-related features
                 cZagg = x.new_zeros((B, self.cfg.dim))
-                zbar = x.new_zeros((B, N))
                 m = x.new_zeros((B, 1))
                 cXZagg = x.new_zeros((B, self.cfg.dim))
                 cYZagg = x.new_zeros((B, self.cfg.dim))
@@ -213,12 +216,10 @@ class CISetTransformer(nn.Module):
                     cYZagg = x.new_zeros((B, self.cfg.dim))
 
                 if z_mask is None:
-                    zbar = z.mean(dim=1)  # mean of all Z columns at each row
                     m = x.new_full((B, 1), float(M))  # how many conditioning columns in each batch?
                 else:
-                    mask = z_mask.to(dtype=x.dtype).unsqueeze(-1)      # (B,M,1)
-                    m = mask.sum(dim=1).clamp_min(1.0)                 # (B,1)
-                    zbar = (z * mask).sum(dim=1) / m                   # (B,N)
+                    mask = z_mask.to(dtype=x.dtype).unsqueeze(-1)       # (B,M,1)
+                    m = mask.sum(dim=1)                                  # (B,1)
 
         # Symmetric features from X and Y column encodings
         s_add = cx + cy
@@ -234,7 +235,7 @@ class CISetTransformer(nn.Module):
             xz_mul = cXZagg * cYZagg
             feats.extend([xz_add, xz_abs, xz_mul])
         if self.use_pair:
-            feats.append(self.pair_enc(x, y, zbar))
+            feats.append(self.pair_enc(x, y))
         feats.append(m.to(dtype=x.dtype))
 
         # Final prediction head
