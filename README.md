@@ -1,11 +1,9 @@
-# ci_transformer: Causal data generation + CI classifiers under one namespace
+# ci_transformer: Causal data generation + CI classifiers
 
 Unified Python toolkit for:
 - Generating diverse continuous SCMs and datasets
 - Training and benchmarking conditional-independence (CI) classifiers
 - Streaming, curriculum-based CI training workflows
-
-Everything now lives under the single namespace `ci_transformer`.
 
 ---
 
@@ -60,7 +58,7 @@ batch = next(iter(dl))  # contains x, y, z, z_mask, label
 
 ---
 
-## Package layout (single namespace)
+## Package layout
 - `ci_transformer.causal_data_gen`: SCMs, DAG sampling, mechanisms, dataset I/O
 - `ci_transformer.ci_models`: PyTorch CI classifier + configs
 - `ci_transformer.training`: Streaming CI dataset + training loop utilities
