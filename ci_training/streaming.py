@@ -102,9 +102,9 @@ class CIStreamingDataset(IterableDataset):
     def __iter__(self) -> Iterator[Dict[str, Any]]:
         worker = torch.utils.data.get_worker_info()
         if worker is None:
-            worker_id, num_workers = 0, 1
+            worker_id = 0
         else:
-            worker_id, num_workers = worker.id, worker.num_workers
+            worker_id = worker.id
 
         # Make RNG distinct per worker
         rng = np.random.default_rng(self.seed + 10_000 * worker_id)
@@ -139,20 +139,17 @@ class CIStreamingDataset(IterableDataset):
                 want_indep = bool(rng.random() < float(self.target_p_indep))
 
             # Rejection sample queries until label matches desired label (or give up)
-            for _try in range(self.max_tries):
+            for _ in range(self.max_tries):
                 # Choose query
                 i, j = _choose_pair(rng, d)
-                m = self.curriculum.sample_m(rng, global_step)
-                m = min(m, self.m_max)
+                sampled_m = self.curriculum.sample_m(rng, global_step)
+                m = min(sampled_m, self.m_max)
                 S = _choose_S(rng, d, i, j, m)
 
                 # Ground-truth CI label via d-separation
                 is_indep = scm.is_ci_true(i, j, S)
                 if want_indep is None or (is_indep == want_indep):
                     break
-            else:
-                # If we couldn't find the desired label quickly, just accept the last sample
-                pass
 
             # Extract columns
             x = torch.from_numpy(X[:, i].copy()).float()    # (N,)
