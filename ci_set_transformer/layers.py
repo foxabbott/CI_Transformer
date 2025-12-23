@@ -43,32 +43,6 @@ class MAB(nn.Module):
         H = self.ln1(X + attn_out)
         return self.ln2(H + self.ff(H))
 
-class SAB(nn.Module):
-    """
-    Self-Attention Block (SAB).
-
-    Applies Multihead Attention Block where the query and context tensors 
-    are identical (i.e., 'self-attention' over the input set).
-
-    Args:
-        dim (int): Embedding dimension.
-        num_heads (int): Number of attention heads.
-        ff_dim (Optional[int]): Feedforward hidden dimension.
-        dropout (float): Dropout probability.
-
-    Inputs:
-        X (Tensor): Input tensor of shape (B, N, dim).
-
-    Returns:
-        Tensor: Output tensor of shape (B, N, dim).
-    """
-    def __init__(self, dim: int, num_heads: int, ff_dim: Optional[int] = None, dropout: float = 0.0):
-        super().__init__()
-        self.mab = MAB(dim, num_heads, ff_dim=ff_dim, dropout=dropout)
-
-    def forward(self, X: Tensor) -> Tensor:
-        return self.mab(X, X)
-
 class ISAB(nn.Module):
     """
     Induced Set Attention Block (ISAB).
@@ -93,7 +67,7 @@ class ISAB(nn.Module):
     """
     def __init__(self, dim: int, num_heads: int, num_inducing: int = 32, ff_dim: Optional[int] = None, dropout: float = 0.0):
         super().__init__()
-        self.I = nn.Parameter(torch.randn(1, num_inducing, dim) * 0.02)
+        self.I = nn.Parameter(torch.randn(1, num_inducing, dim) * 0.02)  # Initialise inducing points with small magnitude to prevent large DPs early in training
         self.mab1 = MAB(dim, num_heads, ff_dim=ff_dim, dropout=dropout)
         self.mab2 = MAB(dim, num_heads, ff_dim=ff_dim, dropout=dropout)
 
