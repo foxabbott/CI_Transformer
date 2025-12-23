@@ -4,6 +4,26 @@ from torch import nn, Tensor
 from typing import Optional
 
 class MAB(nn.Module):
+    """
+    Multihead Attention Block (MAB) as used in Set Transformer architectures.
+
+    Applies multi-head self-attention between a 'query' input X and 
+    context input Y, followed by layer normalization and a feed-forward block 
+    with residual connection. Can be used for both self- and cross-attention.
+
+    Args:
+        dim (int): Embedding dimension.
+        num_heads (int): Number of attention heads.
+        ff_dim (Optional[int]): Dimension for the hidden feedforward (FF) layer. Defaults to 4*dim if None.
+        dropout (float): Dropout probability.
+
+    Inputs:
+        X (Tensor): Query tensor of shape (B, N, dim).
+        Y (Tensor): Context tensor (as both key and value) of shape (B, M, dim).
+
+    Returns:
+        Tensor: Output tensor of shape (B, N, dim).
+    """
     def __init__(self, dim: int, num_heads: int, ff_dim: Optional[int] = None, dropout: float = 0.0):
         super().__init__()
         self.attn = nn.MultiheadAttention(embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True)
@@ -18,39 +38,98 @@ class MAB(nn.Module):
             nn.Dropout(dropout),
         )
 
-    def forward(self, X: Tensor, Y: Tensor, key_padding_mask: Optional[Tensor] = None) -> Tensor:
-        attn_out, _ = self.attn(query=X, key=Y, value=Y, key_padding_mask=key_padding_mask)
+    def forward(self, X: Tensor, Y: Tensor) -> Tensor:
+        attn_out, _ = self.attn(query=X, key=Y, value=Y)
         H = self.ln1(X + attn_out)
         return self.ln2(H + self.ff(H))
 
 class SAB(nn.Module):
+    """
+    Self-Attention Block (SAB).
+
+    Applies Multihead Attention Block where the query and context tensors 
+    are identical (i.e., 'self-attention' over the input set).
+
+    Args:
+        dim (int): Embedding dimension.
+        num_heads (int): Number of attention heads.
+        ff_dim (Optional[int]): Feedforward hidden dimension.
+        dropout (float): Dropout probability.
+
+    Inputs:
+        X (Tensor): Input tensor of shape (B, N, dim).
+
+    Returns:
+        Tensor: Output tensor of shape (B, N, dim).
+    """
     def __init__(self, dim: int, num_heads: int, ff_dim: Optional[int] = None, dropout: float = 0.0):
         super().__init__()
         self.mab = MAB(dim, num_heads, ff_dim=ff_dim, dropout=dropout)
 
-    def forward(self, X: Tensor, key_padding_mask: Optional[Tensor] = None) -> Tensor:
-        return self.mab(X, X, key_padding_mask=key_padding_mask)
+    def forward(self, X: Tensor) -> Tensor:
+        return self.mab(X, X)
 
 class ISAB(nn.Module):
+    """
+    Induced Set Attention Block (ISAB).
+
+    Applies attention using a set of learned inducing points for scalable 
+    set attention. Consists of two MABs: 
+    (1) Inducing points attend to the input set.
+    (2) Input attends to the induced set.
+
+    Args:
+        dim (int): Embedding dimension.
+        num_heads (int): Number of attention heads.
+        num_inducing (int): Number of inducing points.
+        ff_dim (Optional[int]): Feedforward hidden dimension.
+        dropout (float): Dropout probability.
+
+    Inputs:
+        X (Tensor): Input tensor of shape (B, N, dim).
+
+    Returns:
+        Tensor: Output tensor of shape (B, N, dim).
+    """
     def __init__(self, dim: int, num_heads: int, num_inducing: int = 32, ff_dim: Optional[int] = None, dropout: float = 0.0):
         super().__init__()
         self.I = nn.Parameter(torch.randn(1, num_inducing, dim) * 0.02)
         self.mab1 = MAB(dim, num_heads, ff_dim=ff_dim, dropout=dropout)
         self.mab2 = MAB(dim, num_heads, ff_dim=ff_dim, dropout=dropout)
 
-    def forward(self, X: Tensor, key_padding_mask: Optional[Tensor] = None) -> Tensor:
+    def forward(self, X: Tensor) -> Tensor:
         B = X.size(0)
         I = self.I.expand(B, -1, -1)
-        H = self.mab1(I, X, key_padding_mask=key_padding_mask)
+        H = self.mab1(I, X)
         return self.mab2(X, H)
 
 class PMA(nn.Module):
+    """
+    Pooling by Multihead Attention (PMA).
+
+    Uses a learned set of seed vectors to perform attention-based 
+    pooling over a set. Outputs one (or more) set-level representations 
+    for the input set.
+
+    Args:
+        dim (int): Embedding dimension.
+        num_heads (int): Number of attention heads.
+        num_seeds (int): Number of seed vectors (i.e., output pooled representations). Default: 1.
+        ff_dim (Optional[int]): Feedforward hidden dimension.
+        dropout (float): Dropout probability.
+
+    Inputs:
+        X (Tensor): Input tensor of shape (B, N, dim).
+
+    Returns:
+        Tensor: Output tensor of shape (B, num_seeds, dim).
+    """
     def __init__(self, dim: int, num_heads: int, num_seeds: int = 1, ff_dim: Optional[int] = None, dropout: float = 0.0):
         super().__init__()
         self.S = nn.Parameter(torch.randn(1, num_seeds, dim) * 0.02)
         self.mab = MAB(dim, num_heads, ff_dim=ff_dim, dropout=dropout)
 
-    def forward(self, X: Tensor, key_padding_mask: Optional[Tensor] = None) -> Tensor:
+    def forward(self, X: Tensor) -> Tensor:
         B = X.size(0)
         S = self.S.expand(B, -1, -1)
-        return self.mab(S, X, key_padding_mask=key_padding_mask)
+        return self.mab(S, X)
