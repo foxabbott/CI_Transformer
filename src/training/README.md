@@ -1,7 +1,7 @@
 # training
 
 Minimal training utilities to connect:
-- `causal_synth` (random continuous SCMs + observational samples)
+- `causal_data_gen` (random continuous SCMs + observational samples)
 - `ci_models` (your invariant CI classifier model)
 
 Implements:
@@ -25,7 +25,7 @@ pip install -e .
 ```
 
 You should already have editable installs for:
-- causal_synth
+- causal_data_gen
 - ci_models
 
 ## Quick run

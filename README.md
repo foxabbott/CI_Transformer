@@ -1,14 +1,14 @@
-# Causal Synth: Synthetic Causal Data, CI Benchmarks, and Invariant Classifiers
+# Causal Data Gen: Synthetic Causal Data, CI Benchmarks, and Invariant Classifiers
 
 ## Project Overview
 
-**Causal Synth** is a modular, research-oriented Python toolkit for:
+**Causal Data Gen** is a modular, research-oriented Python toolkit for:
 - **Generating diverse, continuous synthetic datasets** using randomly generated latent causal DAGs (SCMs)
 - **Training and benchmarking Conditional Independence (CI) classifiers**
 - Supporting scalable workflow for causal structure discovery, CI-test benchmarking, and representation learning
 
 This repo unifies three core components:
-- `causal_synth`: Synthetic SCM + dataset generator with diverse, nonparametric mechanisms and noises
+- `causal_data_gen`: Synthetic SCM + dataset generator with diverse, nonparametric mechanisms and noises
 - `ci_models`: Neural classifier (PyTorch) for CI testing, with symmetry- and permutation-invariance
 - `training`: Streaming dataset/utilities to generate on-the-fly CI query data, and curriculum-based CI classifier training
 
@@ -30,9 +30,9 @@ This repo unifies three core components:
 Typical install (from repo root, after cloning):
 
 ```bash
-pip install -e ./causal_synth
-pip install -e ./ci_models
-pip install -e ./training
+pip install -e .
+pip install -e ./src/ci_models
+pip install -e ./src/training
 ```
 
 You will need Python>=3.9, numpy, pytorch, and other common deps.
@@ -44,7 +44,7 @@ You will need Python>=3.9, numpy, pytorch, and other common deps.
 ### 1. Generate an SCM & Dataset
 
 ```python
-from causal_synth import CausalSCM, RandomDAGConfig
+from causal_data_gen import CausalSCM, RandomDAGConfig
 
 cfg = RandomDAGConfig(d=12, edge_prob=0.22, max_parents=4, ensure_connected=True)
 scm = CausalSCM.random(cfg, seed=0)
@@ -60,7 +60,7 @@ print(scm.is_ci_true(i=3, j=7, S=[0,2]))
 ### 2. Generate and Save Ground-Truth Datasets
 
 ```python
-from causal_synth import generate_dataset, RandomDAGConfig
+from causal_data_gen import generate_dataset, RandomDAGConfig
 
 ds, scm = generate_dataset(n=20000, cfg=RandomDAGConfig(d=10, edge_prob=0.25, max_parents=3), seed=123)
 ds.save_npz("toy_scm_dataset.npz")
@@ -99,13 +99,13 @@ batch = next(iter(dl))
 
 - On-the-fly data: Training is done with a streaming dataloader, which samples a new random SCM and CI queries each batch—no overfitting to static training sets.
 - Curriculum: By default, CI classifier training progresses from easy (small S) to hard (large S).
-- Fully pluggable SCM generator: To change the types of mechanisms/noises, edit/add to `causal_synth/mechanisms.py`.
+- Fully pluggable SCM generator: To change the types of mechanisms/noises, edit/add to `causal_data_gen/mechanisms.py`.
 
 ---
 
 ## Components
 
-- **causal_synth/**: Core data generation, SCM, random DAGs, mechanisms, Dataset saving/loading
+- **causal_data_gen/**: Core data generation, SCM, random DAGs, mechanisms, Dataset saving/loading
 - **ci_models/**: PyTorch CI classifier, implements a permutation-invariant deep net that predicts CI between pairs (i, j | S)
 - **training/**: Streaming data utilities & curriculum training code for efficient, fair, and scalable experimentation
 - **examples/**: Example scripts for dataset generation and running basic pipelines
@@ -113,7 +113,7 @@ batch = next(iter(dl))
 ---
 
 ## Extending Mechanisms/Noises
-Add families in `causal_synth/mechanisms.py`. A mechanism is a factory with signature:
+Add families in `causal_data_gen/mechanisms.py`. A mechanism is a factory with signature:
 ```python
 def my_mechanism(rng, k):
     def f(P, eps): ...  # P: parent values (n, k), eps: noise (n,)

@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "training"
 version = "0.1.0"
-description = "Training utilities for CI classifier on causal_synth"
+description = "Training utilities for CI classifier on causal_data_gen"
 requires-python = ">=3.9"
-dependencies = ["torch", "numpy", "causal_synth", "ci_models"]
+dependencies = ["torch", "numpy", "causal_data_gen", "ci_models"]
 
 [tool.setuptools]
 package-dir = {"" = "."}

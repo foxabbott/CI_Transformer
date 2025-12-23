@@ -1,6 +1,6 @@
 """Train the CI classifier on streaming synthetic data.
 
-Run (from repo root, with editable installs for causal_synth + ci_models + training):
+Run (from repo root, with editable installs for causal_data_gen + ci_models + training):
     python examples/train_ci.py --out runs/ci_demo
 
 """

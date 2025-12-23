@@ -1,4 +1,4 @@
-"""causal_synth: lightweight synthetic SCM generator for continuous variables.
+"""causal_data_gen: lightweight synthetic SCM generator for continuous variables.
 
 Main entrypoint: `CausalSCM.random(...)` and `scm.sample(n)`.
 """

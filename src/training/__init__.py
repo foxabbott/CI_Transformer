@@ -1,4 +1,4 @@
-"""Utilities to train a conditional-independence classifier on causal_synth.
+"""Utilities to train a conditional-independence classifier on causal_data_gen.
 
 - Streaming IterableDataset that samples random SCMs and CI queries
 - Curriculum scheduling over conditioning-set size m
