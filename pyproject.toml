@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "ci_transformer"
 version = "0.1.0"
 description = "Synthetic continuous SCM generator with diverse mechanisms"
+readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "numpy",
@@ -17,5 +18,5 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["causal_data_gen*", "ci_models*", "training*"]
+include = ["ci_transformer*"]
 exclude = ["tests*"]

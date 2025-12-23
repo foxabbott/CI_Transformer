@@ -5,8 +5,8 @@ Run (from repo root after `pip install -e .`):
 
 """
 import argparse
-from training import train_ci_model, Curriculum
-from ci_models import CISetTransformerConfig
+from ci_transformer.training import train_ci_model, Curriculum
+from ci_transformer.ci_models import CISetTransformerConfig
 
 def main():
     p = argparse.ArgumentParser()

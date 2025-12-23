@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import IterableDataset, DataLoader
 
-from causal_data_gen import CausalSCM, RandomDAGConfig
+from ci_transformer.causal_data_gen import CausalSCM, RandomDAGConfig
 
 @dataclass
 class Curriculum:

@@ -1,7 +1,7 @@
 import torch
 import pytest
 
-from ci_models import CISetTransformer, CISetTransformerConfig
+from ci_transformer.ci_models import CISetTransformer, CISetTransformerConfig
 
 def assert_close(a: torch.Tensor, b: torch.Tensor, atol=1e-6, rtol=1e-6):
     if not torch.allclose(a, b, atol=atol, rtol=rtol):

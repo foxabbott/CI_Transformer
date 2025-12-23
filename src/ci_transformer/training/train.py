@@ -11,7 +11,7 @@ from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 
-from ci_models import CISetTransformer, CISetTransformerConfig
+from ci_transformer.ci_models import CISetTransformer, CISetTransformerConfig
 from .streaming import CIStreamingDataset, Curriculum, make_dataloader
 
 @torch.no_grad()
