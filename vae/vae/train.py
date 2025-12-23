@@ -16,7 +16,7 @@ def main():
     p.add_argument("--steps", default=200000, type=int)
     p.add_argument("--lr", default=3e-4, type=float)
     p.add_argument("--workers", default=4, type=int)
-    p.add_argument("--recon-loss", default="bce", choices=["bce","mse"])
+    p.add_argument("--recon-loss", default="bce", choices=["bce","mse","l1"])
 
     # objective knobs
     p.add_argument("--beta", default=4.0, type=float)

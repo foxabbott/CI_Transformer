@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Sequence, Tuple
 
+import math
 import torch
 from torch import nn, Tensor
 from torchvision.utils import make_grid, save_image
@@ -79,6 +80,7 @@ def load_vae(ckpt_path: str, factory: Optional[str] = None, map_location: str = 
 
 @torch.no_grad()
 def run_traversals(model: nn.Module, data_dir: str, out_dir: str, cfg: TraversalConfig = TraversalConfig()) -> None:
+
     os.makedirs(out_dir, exist_ok=True)
     dev = _default_device(cfg.device)
     model = model.to(dev).eval()
@@ -100,6 +102,7 @@ def run_traversals(model: nn.Module, data_dir: str, out_dir: str, cfg: Traversal
         xrec = xrec.clamp(0, 1)
     save_image(make_grid(torch.cat([x, xrec], dim=0), nrow=B), os.path.join(out_dir, "base_and_recon.png"))
 
+    avg_dists_by_dim = []
     for i in dims:
         imgs = []
         for v in values:
@@ -123,7 +126,18 @@ def run_traversals(model: nn.Module, data_dir: str, out_dir: str, cfg: Traversal
         # Compute per-image L2 distance
         dists = ((first_imgs - last_imgs).pow(2).view(B, -1).sum(dim=1).sqrt())  # (B,)
         avg_dist = dists.mean().item()
+        avg_dists_by_dim.append((i, avg_dist))
         print(f"Average L2 distance between first and last image for dim {i}: {avg_dist:.6f}")
+
+    # After traversing all dims, compute top 10% of dimensions by average L2 distance and print them in order
+    if len(avg_dists_by_dim) > 0:
+        n_top = max(1, math.ceil(len(avg_dists_by_dim) * 0.10))
+        sorted_dims = sorted(avg_dists_by_dim, key=lambda x: x[1], reverse=True)
+        top_dims = sorted_dims[:n_top]
+        print("\nTop {:d}% of dimensions by average L2 distance:".format(int(100 * n_top / len(avg_dists_by_dim))))
+        for idx, dist in top_dims:
+            print(f"  dim {idx}: avg L2 distance = {dist:.6f}")
+
 
 
 @torch.no_grad()

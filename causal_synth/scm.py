@@ -14,7 +14,6 @@ Array = np.ndarray
 class SCMMetadata:
     d: int
     adj: Array
-    weights: Array
     order: List[int]
     parents: List[List[int]]
     mechanisms: List[Dict[str, Any]]
@@ -49,7 +48,7 @@ class CausalSCM:
         seed: Optional[int] = None,
     ) -> "CausalSCM":
         r = rng(seed)
-        adj, weights, order = random_dag(cfg, seed=seed)
+        adj, order = random_dag(cfg, seed=seed)
         d = cfg.d
         parents = [np.where(adj[:, i] != 0)[0].astype(int).tolist() for i in range(d)]
         mechs: List[MechanismFn] = []
@@ -68,7 +67,6 @@ class CausalSCM:
         meta = SCMMetadata(
             d=d,
             adj=adj,
-            weights=weights,
             order=order,
             parents=parents,
             mechanisms=mech_meta,
@@ -104,7 +102,7 @@ class CausalSCM:
         return X
 
     def is_ci_true(self, i: int, j: int, S: List[int]) -> bool:
-        """Ground-truth conditional independence via d-separation on the latent DAG."""
+        """Ground-truth conditional independence via d-separation on the DAG (as represented by the adjacency matirx)."""
         return d_separated(self.adj, [i], [j], S)
 
     def adjacency(self) -> Array:

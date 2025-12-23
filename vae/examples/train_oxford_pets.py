@@ -16,7 +16,9 @@ def main():
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--z-dim", type=int, default=64)
     p.add_argument("--workers", type=int, default=0)
-    p.add_argument("--recon-loss", type=str, default="mse", choices=["mse", "bce"])
+    p.add_argument("--recon-loss", type=str, default="bce", choices=["mse", "bce", "l1"])
+    p.add_argument("--base-channels", default=32, type=int)
+    p.add_argument("--beta", default=4.0, type=float)
     args = p.parse_args()
 
     data = Path(args.data)
@@ -35,7 +37,10 @@ def main():
         "--z-dim", str(args.z_dim),
         "--workers", str(args.workers),
         "--recon-loss", args.recon_loss,
+        "--base-channels", str(args.base_channels),
         "--channels", "3",
+        "--kl-weight", "1",
+        "--beta", str(args.beta)
     ]
 
     print("Running:\n  " + " ".join(cmd))

@@ -130,7 +130,6 @@ def train_ci_model(
             avg_prob = probs.mean().item()
             prob_std = probs.std().item()
 
-
         opt.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)

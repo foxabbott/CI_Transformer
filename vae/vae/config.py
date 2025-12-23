@@ -3,7 +3,7 @@ from dataclasses import dataclass, asdict
 from typing import Literal, Optional
 
 ModelName = Literal["vae", "beta_vae", "tc_vae", "dip_vae", "factor_vae"]
-ReconLoss = Literal["bce", "mse"]
+ReconLoss = Literal["bce", "mse", "l1"]
 DIPType = Literal["i", "ii"]
 
 @dataclass

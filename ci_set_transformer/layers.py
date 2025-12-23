@@ -100,7 +100,7 @@ class PMA(nn.Module):
     """
     def __init__(self, dim: int, num_heads: int, num_seeds: int = 1, ff_dim: Optional[int] = None, dropout: float = 0.0):
         super().__init__()
-        self.S = nn.Parameter(torch.randn(1, num_seeds, dim) * 0.02)
+        self.S = nn.Parameter(torch.randn(1, num_seeds, dim) * 0.02)  # seed queries
         self.mab = MAB(dim, num_heads, ff_dim=ff_dim, dropout=dropout)
 
     def forward(self, X: Tensor) -> Tensor:

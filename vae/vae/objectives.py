@@ -13,11 +13,14 @@ def recon_loss(x_recon_logits: Tensor, x: Tensor, kind: str) -> Tensor:
         loss = F.binary_cross_entropy_with_logits(x_recon_logits, x, reduction="none")
         return loss.flatten(1).sum(dim=1)
     if kind == "mse":
-        # assume decoder outputs raw values; use MSE
         x_recon = torch.sigmoid(x_recon_logits)
         loss = F.mse_loss(x_recon, x, reduction="none")
         return loss.flatten(1).sum(dim=1)
-    raise ValueError("recon_loss kind must be 'bce', 'mse'.")
+    if kind == "l1":
+        x_recon = torch.sigmoid(x_recon_logits)
+        loss = F.l1_loss(x_recon, x, reduction="none")
+        return loss.flatten(1).sum(dim=1)
+    raise ValueError("recon_loss kind must be 'bce', 'mse', or 'l1'.")
 
 def tc_vae_decompose(mu: Tensor, logvar: Tensor, z: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
     """Beta-TC-VAE decomposition estimates (B,) for MI, TC, DW-KL.

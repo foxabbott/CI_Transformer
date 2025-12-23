@@ -65,7 +65,8 @@ def train_vae(cfg: VAETrainConfig) -> None:
     for step in range(cfg.steps):
         x = next_batch().to(dev)
 
-        out = model(x)
+        deterministic = (cfg.kl_weight == 0.0)
+        out = model(x, deterministic=deterministic)
         x_recon_logits = out.x_recon
         mu, logvar, z = out.mu, out.logvar, out.z
 
@@ -74,6 +75,11 @@ def train_vae(cfg: VAETrainConfig) -> None:
 
         # default ELBO objective: minimize (rec + kl)
         loss = rec + cfg.kl_weight * kl
+        
+        bce_loss = recon_loss(x_recon_logits, x, "bce")
+        mse_loss = recon_loss(x_recon_logits, x, "mse")
+        l1_loss = recon_loss(x_recon_logits, x, "l1")
+        
 
         tc_term = None
 
@@ -96,7 +102,7 @@ def train_vae(cfg: VAETrainConfig) -> None:
             # 1) update discriminator a few steps
             for _ in range(cfg.disc_steps):
                 with torch.no_grad():
-                    out_d = model.vae(x)
+                    out_d = model.vae(x, deterministic=deterministic)
                     z_real = out_d.z.detach()
                     z_perm = permute_dims(z_real)
 
@@ -121,7 +127,7 @@ def train_vae(cfg: VAETrainConfig) -> None:
                     ema_acc_disc = ema(ema_acc_disc, acc_d)
 
             # 2) generator/vae loss with TC estimate from discriminator
-            out = model.vae(x)
+            out = model.vae(x, deterministic=deterministic)
             x_recon_logits = out.x_recon
             mu, logvar, z = out.mu, out.logvar, out.z
             rec = recon_loss(x_recon_logits, x, cfg.recon_loss)
@@ -149,6 +155,9 @@ def train_vae(cfg: VAETrainConfig) -> None:
             l = float(loss_scalar.item())
             r = float(rec.mean().item())
             k = float(kl.mean().item())
+            bce = float(bce_loss.mean().item())
+            mse = float(mse_loss.mean().item())
+            l1 = float(l1_loss.mean().item())
             ema_loss = ema(ema_loss, l)
             ema_recon = ema(ema_recon, r)
             ema_kl = ema(ema_kl, k)
@@ -157,7 +166,7 @@ def train_vae(cfg: VAETrainConfig) -> None:
 
         if cfg.log_every and (step + 1) % cfg.log_every == 0:
             dt = time.time() - t0
-            msg = f"step {step+1:>7}/{cfg.steps} | loss {l:.4f} (ema {ema_loss:.4f}) | rec {r:.4f} | kl {k:.4f}"
+            msg = f"step {step+1:>7}/{cfg.steps} | loss {l:.1f} (ema {ema_loss:.1f}) | rec {r:.1f} | kl {k:.1f} | bce {bce:.1f} mse {mse:.1f} l1 {l1:.1f}"
             if ema_tc is not None:
                 msg += f" | tc {ema_tc:.4f}"
             if ema_acc_disc is not None:

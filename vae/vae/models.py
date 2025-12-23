@@ -82,8 +82,14 @@ class ConvDecoder(nn.Module):
         # final upsample to 64x64 + produce logits/mean
         self.final = nn.Sequential(
             nn.Upsample(scale_factor=2, mode="nearest"),
-            nn.Conv2d(c // 8, out_ch, kernel_size=3, stride=1, padding=1),
-        )
+            nn.Conv2d(c // 8, base_ch, 3, 1, 1),
+            gn(base_ch),
+            nn.GELU(),
+            nn.Conv2d(base_ch, base_ch, 3, 1, 1),
+            gn(base_ch),
+            nn.GELU(),
+            nn.Conv2d(base_ch, out_ch, 3, 1, 1),
+            )
 
     def forward(self, z: Tensor) -> Tensor:
         h = self.fc(z)
@@ -105,7 +111,9 @@ class ConvVAE(nn.Module):
     def encode(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         return self.enc(x)
 
-    def reparameterize(self, mu: Tensor, logvar: Tensor) -> Tensor:
+    def reparameterize(self, mu: Tensor, logvar: Tensor, deterministic: bool = False) -> Tensor:
+        if deterministic:
+            return mu
         std = (0.5 * logvar).exp()
         eps = torch.randn_like(std)
         return mu + eps * std
@@ -113,9 +121,9 @@ class ConvVAE(nn.Module):
     def decode(self, z: Tensor) -> Tensor:
         return self.dec(z)
 
-    def forward(self, x: Tensor) -> VAEOutput:
+    def forward(self, x: Tensor, deterministic: bool = False) -> VAEOutput:
         mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
+        z = self.reparameterize(mu, logvar, deterministic=deterministic)
         x_recon = self.decode(z)
         return VAEOutput(x_recon=x_recon, mu=mu, logvar=logvar, z=z)
 

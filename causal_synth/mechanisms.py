@@ -25,10 +25,12 @@ class NoiseSpec:
             scale = p.get("scale", 1.0)
             return r.standard_t(df=df, size=n) * scale
         if self.name == "uniform":
-            a = p.get("low", -1.0); b = p.get("high", 1.0)
+            a = p.get("low", -1.0)
+            b = p.get("high", 1.0)
             return r.uniform(a, b, size=n)
         if self.name == "logistic":
-            loc = p.get("loc", 0.0); scale = p.get("scale", 1.0)
+            loc = p.get("loc", 0.0)
+            scale = p.get("scale", 1.0)
             u = r.uniform(1e-6, 1-1e-6, size=n)
             return loc + scale * np.log(u/(1-u))
         if self.name == "mixture_gaussian":
@@ -41,7 +43,9 @@ class NoiseSpec:
             out[~m] = r.normal(m2, s2, size=int((~m).sum()))
             return out
         if self.name == "gamma_shifted":
-            k = p.get("k", 2.0); theta = p.get("theta", 1.0); shift = p.get("shift", -1.0)
+            k = p.get("k", 2.0)
+            theta = p.get("theta", 1.0)
+            shift = p.get("shift", -1.0)
             return r.gamma(shape=k, scale=theta, size=n) + shift
         raise ValueError(f"Unknown noise: {self.name}")
 
