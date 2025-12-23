@@ -1,8 +1,8 @@
-# ci_training
+# training
 
 Minimal training utilities to connect:
 - `causal_synth` (random continuous SCMs + observational samples)
-- `ci_set_transformer` (your invariant CI classifier model)
+- `ci_models` (your invariant CI classifier model)
 
 Implements:
 
@@ -18,7 +18,7 @@ Implements:
 
 ## Install
 
-Put `ci_training/` in your repo and install editable from its folder:
+Put `training/` in your repo and install editable from its folder:
 
 ```bash
 pip install -e .
@@ -26,7 +26,7 @@ pip install -e .
 
 You should already have editable installs for:
 - causal_synth
-- ci_set_transformer
+- ci_models
 
 ## Quick run
 
@@ -39,7 +39,7 @@ Checkpoints saved to `runs/ci_demo/`.
 ## Using the dataset directly
 
 ```python
-from ci_training import CIStreamingDataset, make_dataloader, Curriculum
+from training import CIStreamingDataset, make_dataloader, Curriculum
 
 ds = CIStreamingDataset(n_rows=500, m_max=5, curriculum=Curriculum())
 dl = make_dataloader(ds, batch_size=64)

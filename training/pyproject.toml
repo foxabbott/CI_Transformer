@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ci_training"
+name = "training"
 version = "0.1.0"
 description = "Training utilities for CI classifier on causal_synth"
 requires-python = ">=3.9"
-dependencies = ["torch", "numpy", "causal_synth", "ci_set_transformer"]
+dependencies = ["torch", "numpy", "causal_synth", "ci_models"]
 
 [tool.setuptools]
 package-dir = {"" = "."}

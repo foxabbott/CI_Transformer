@@ -1,6 +1,6 @@
 import torch
 
-from ci_set_transformer import CISetTransformer, CISetTransformerConfig
+from ci_models import CISetTransformer, CISetTransformerConfig
 
 
 def assert_close(a: torch.Tensor, b: torch.Tensor, name: str, atol=1e-6, rtol=1e-6):

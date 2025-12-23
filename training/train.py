@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import asdict
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 import time
 import json
 
@@ -11,7 +11,7 @@ from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 
-from ci_set_transformer import CISetTransformer, CISetTransformerConfig
+from ci_models import CISetTransformer, CISetTransformerConfig
 from .streaming import CIStreamingDataset, Curriculum, make_dataloader
 
 @torch.no_grad()
@@ -135,15 +135,15 @@ def train_ci_model(
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step()
 
-        l = float(loss.item())
-        ema_loss = l if ema_loss is None else (0.98 * ema_loss + 0.02 * l)
+        loss_val = float(loss.item())
+        ema_loss = loss_val if ema_loss is None else (0.98 * ema_loss + 0.02 * loss_val)
         ema_acc = acc if ema_acc is None else (0.98 * ema_acc + 0.02 * acc)
 
         if (step + 1) % log_every == 0:
             dt = time.time() - t0
             max_m = curriculum.max_m_at_step(step)
             print(
-                f"step {step+1:>7}/{steps} | loss {l:.4f} (ema {ema_loss:.4f})"
+                f"step {step+1:>7}/{steps} | loss {loss_val:.4f} (ema {ema_loss:.4f})"
                 f" | acc {acc:.3f} (ema {ema_acc:.3f}) | p(indep) {p_indep:.3f} | avg(p̂) {avg_prob:.3f} | std(p̂) {prob_std:.3f}"
                 f" | max_m {max_m} | {dt:.1f}s"
             )

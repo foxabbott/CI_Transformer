@@ -1,12 +1,12 @@
 """Train the CI classifier on streaming synthetic data.
 
-Run (from repo root, with editable installs for causal_synth + ci_set_transformer + ci_training):
+Run (from repo root, with editable installs for causal_synth + ci_models + training):
     python examples/train_ci.py --out runs/ci_demo
 
 """
 import argparse
-from ci_training import train_ci_model, Curriculum
-from ci_set_transformer import CISetTransformerConfig
+from training import train_ci_model, Curriculum
+from ci_models import CISetTransformerConfig
 
 def main():
     p = argparse.ArgumentParser()

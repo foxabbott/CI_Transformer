@@ -9,8 +9,8 @@
 
 This repo unifies three core components:
 - `causal_synth`: Synthetic SCM + dataset generator with diverse, nonparametric mechanisms and noises
-- `ci_set_transformer`: Neural classifier (PyTorch) for CI testing, with symmetry- and permutation-invariance
-- `ci_training`: Streaming dataset/utilities to generate on-the-fly CI query data, and curriculum-based CI classifier training
+- `ci_models`: Neural classifier (PyTorch) for CI testing, with symmetry- and permutation-invariance
+- `training`: Streaming dataset/utilities to generate on-the-fly CI query data, and curriculum-based CI classifier training
 
 ---
 
@@ -31,8 +31,8 @@ Typical install (from repo root, after cloning):
 
 ```bash
 pip install -e ./causal_synth
-pip install -e ./ci_set_transformer
-pip install -e ./ci_training
+pip install -e ./ci_models
+pip install -e ./training
 ```
 
 You will need Python>=3.9, numpy, pytorch, and other common deps.
@@ -79,14 +79,14 @@ The `.npz` contains:
 From root (after editable install of all 3 components):
 
 ```bash
-python ci_training/examples/train_ci.py --out runs/ci_demo --steps 50000
+python training/examples/train_ci.py --out runs/ci_demo --steps 50000
 ```
 Saves checkpoints/logs in `runs/ci_demo/`.
 
 #### Using Streaming Dataset Directly
 
 ```python
-from ci_training import CIStreamingDataset, make_dataloader, Curriculum
+from training import CIStreamingDataset, make_dataloader, Curriculum
 ds = CIStreamingDataset(n_rows=500, m_max=5, curriculum=Curriculum())
 dl = make_dataloader(ds, batch_size=64)
 batch = next(iter(dl))
@@ -106,8 +106,8 @@ batch = next(iter(dl))
 ## Components
 
 - **causal_synth/**: Core data generation, SCM, random DAGs, mechanisms, Dataset saving/loading
-- **ci_set_transformer/**: PyTorch CI classifier, implements a permutation-invariant deep net that predicts CI between pairs (i, j | S)
-- **ci_training/**: Streaming data utilities & curriculum training code for efficient, fair, and scalable experimentation
+- **ci_models/**: PyTorch CI classifier, implements a permutation-invariant deep net that predicts CI between pairs (i, j | S)
+- **training/**: Streaming data utilities & curriculum training code for efficient, fair, and scalable experimentation
 - **examples/**: Example scripts for dataset generation and running basic pipelines
 
 ---
